@@ -55,20 +55,23 @@ print(summary(factor(Fatalpk1$EVTYPE)))
 # Narrow down these categories?
 
 # Want the event type to fit in one of the 48 official categories
-sd1$EVTYPE[agrep("TORNADO",sd1$EVTYPE,ignore.case = TRUE)] <- "Tornado"
+sd1$EVTYPE[agrep("TORNAD | GUSTNA | FUNNEL | SPOUT",
+                 sd1$EVTYPE,ignore.case = TRUE)] <- "Tornado"
 sd1$EVTYPE[agrep("HAIL",sd1$EVTYPE,ignore.case = TRUE)] <- "Hail"
-sd1$EVTYPE[agrep("SNOW | ICE ",sd1$EVTYPE,ignore.case = TRUE)] <- "Snow"
-sd1$EVTYPE[agrep("FUNNEL",sd1$EVTYPE,ignore.case = TRUE)] <- "Tornado"
-sd1$EVTYPE[agrep("HURRICANE",sd1$EVTYPE,ignore.case = TRUE)] <- "Hurricane"
-sd1$EVTYPE[agrep("FLOOD",sd1$EVTYPE,ignore.case = TRUE)] <- "Flood"
-sd1$EVTYPE[agrep("COLD | CHILL",sd1$EVTYPE,ignore.case = TRUE)] <- "Cold"
-sd1$EVTYPE[agrep("HEAT",sd1$EVTYPE,ignore.case = TRUE)] <- "Heat"
+sd1$EVTYPE[agrep("SNOW | ICE | WINTER | WINTRY | COLD | FROST |
+                 SLEET | FREEZING ",sd1$EVTYPE,ignore.case = TRUE)] <- "Winter"
+sd1$EVTYPE[agrep("THUNDERSTORM | TSTM | TURBU | BURST ",
+                 sd1$EVTYPE,ignore.case = TRUE)] <- "Thunderstorm"
+sd1$EVTYPE[agrep("HURRICANE | TROPICAL",sd1$EVTYPE,ignore.case = TRUE)] <- "Hurricane"
+sd1$EVTYPE[agrep("FLOOD | FLD",sd1$EVTYPE,ignore.case = TRUE)] <- "Flood"
+sd1$EVTYPE[agrep("DROUGHT | DRY",sd1$EVTYPE,ignore.case = TRUE)] <- "Drought"
+sd1$EVTYPE[agrep("HEAT | HOT | WARM | HIGH TEMP",sd1$EVTYPE,ignore.case = TRUE)] <- "Heat"
 sd1$EVTYPE[agrep("DUST",sd1$EVTYPE,ignore.case = TRUE)] <- "Dust"
-sd1$EVTYPE[agrep("RAIN | PRECIP | SUMMARY",sd1$EVTYPE,ignore.case = TRUE)] <- "Rain"
-sd1$EVTYPE[agrep("RAIN | PRECIP",sd1$EVTYPE,ignore.case = TRUE)] <- "Rain"
-sd1$EVTYPE[agrep("FIRE",sd1$EVTYPE,ignore.case = TRUE)] <- "Fire"
+sd1$EVTYPE[agrep("RAIN | PRECIP | SUMM | Summ",sd1$EVTYPE,ignore.case = TRUE)] <- "Rain"
+sd1$EVTYPE[agrep("SUMMARY | OTHER | ? ",sd1$EVTYPE,ignore.case = TRUE)] <- "Other"
+sd1$EVTYPE[agrep("FIRE | SMOKE",sd1$EVTYPE,ignore.case = TRUE)] <- "Fire"
 sd1$EVTYPE[agrep("MUD",sd1$EVTYPE,ignore.case = TRUE)] <- "Mud"
-sd1$EVTYPE[agrep("VOLCANIC",sd1$EVTYPE,ignore.case = TRUE)] <- "Volcanic"
+sd1$EVTYPE[agrep("VOLCAN",sd1$EVTYPE,ignore.case = TRUE)] <- "Volcanic"
 
 print(length(unique(sd1$EVTYPE)))
 
