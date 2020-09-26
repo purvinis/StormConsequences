@@ -63,7 +63,8 @@ p3 <-ggplot(data =sd1,
   xlab("985 event types") +
   geom_point(aes(y = INJURIES, colour = 'Injuries'))+
   geom_point(aes(y = FATALITIES, colour = 'Fatalities'))+
-  theme(axis.text.x = element_blank())
+  theme(axis.text.x = element_blank())+
+  labs(title = "Raw data scatter plot")
 png('plot3.png',width=1080,height=360,units="px",bg = "transparent")
 print(p3) #make prettier, color the ranges
 dev.off()
@@ -89,21 +90,22 @@ sd3$EVTYPE[grep("FROST|COOL",sd3$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "C
 sd3$EVTYPE[grep("SURF|SEA|TIDE|CURRENT|MARINE|TSUN|BEACH|WAVE|SWELL|SURGE|COASTAL",sd3$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Marine"
 sd3$EVTYPE[grep("RAIN|WET|PRECIP|SHOWER",sd3$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Rain"
 
-#add consolidated events to sd1 for nice facet plot
+#add consolidated events to sd1 for nice facet or dual plot
 sd4 <-data.frame(cbind(FATALITIES=sd1$FATALITIES,
             INJURIES= sd1$INJURIES,
             EVTYPE=sd1$EVTYPE,EVTYPEsub = sd3$EVTYPE))
 
 print(unique(sd4$EVTYPEsub))  #66 event categories
 
-#Try to get all the pre and post data together
+#Try to get all the pre and post data reduction together
 p5 <-ggplot(data =sd4,
             aes(EVTYPEsub,INJURIES))+
   ylab("Fatalities and Injuries")+
   xlab("66 event catagories") +
   geom_point(aes(y = as.numeric(INJURIES), colour = 'Injuries'))+
   geom_point(aes(y = as.numeric(FATALITIES), colour = 'Fatalities'))+
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 90))+
+  labs(title = "Weather events consolidated")
 png('plot5.png',width=1080,height=480,units="px",bg = "transparent")
 print(p5) #make prettier, color the ranges
 dev.off()
@@ -133,9 +135,11 @@ remarksMaxFatal <- StormData$REMARKS[maxFatalIndex] "...july 12 - 16"
 # --------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 
-
+# filter data to find events with high injuries (corresponds to peaks in plots)
 sdinj <- sd1 %>% select(c(INJURIES, EVTYPE,REFNUM)) %>% filter(INJURIES > 50)
+sdfat <- sd1 %>% select(c(FATALITIES, EVTYPE,REFNUM)) %>% filter(FATALITIES > 15)
 print(summary (sdinj))   #421 observations
+print(summary (sdfat))  #91 observations
 
 hist(sdinj$REFNUM,breaks=48)
 print(sdinj$EVTYPE[1:100])  #99 Tornadoes and 1 TSTM WIND
@@ -144,27 +148,43 @@ print(sdinj$EVTYPE[201:300])  #mixed: w tornadoes, heat, flood, ...
 print(sdinj$EVTYPE[301:421])  #mixed: "...
 
 print (sdinj %>% count(EVTYPE, sort = TRUE))  #305 tornadoes, 38 excessive heat, etc
-# Combine: heat (extreme, excessive)
+print (sdfat %>% count(EVTYPE, sort = TRUE)) # 55 tornadoes, with high heat events 2nd
+# Do same with consolidated data:
+sdinjc <- sd3 %>% select(c(INJURIES, EVTYPE,REFNUM)) %>% filter(INJURIES > 50)
+sdfatc <- sd3 %>% select(c(FATALITIES, EVTYPE,REFNUM)) %>% filter(FATALITIES > 15)
 
+print (sdinjc %>% count(EVTYPE, sort = TRUE))  #1 - tornado, 2- heat 
+print (sdfatc %>% count(EVTYPE, sort = TRUE))
+
+#Find max of single events:
 maxInjIndex  <- which.max(sd1$INJURIES)
-eventMaxInj <- StormData$EVTYPE[maxInjIndex]   # "Tornado
+eventMaxInj <- sd1$EVTYPE[maxInjIndex]   # "Tornado
 dateMaxInj <- mdy_hms(StormData$BGN_DATE)[maxInjIndex]  #1979-04-10
 #remarksMaxInj <- StormData$REMARKS[maxInjIndex]
 
-#sd1$EVTYPE[agrep("TORNAD | GUSTNA | FUNNEL ",
-#sd1$EVTYPE,ignore.case = TRUE)] <- "Tornado"  # did not change result
+maxFatIndex  <- which.max(sd1$FATALITIES)
+eventMaxFat <- sd1$EVTYPE[maxFatIndex]   # "Heat
+dateMaxFat <- mdy_hms(StormData$BGN_DATE)[maxFatIndex]  #1995-07-12
+#remarksMaxInj <- StormData$REMARKS[maxInjIndex]
+
+#Quantify by summing top 1000 events with most injuries or fatalities.
+#This determines event type with overall worst injury and fatality record
 #===========================================================================
 # So likely to be tornadoes or heat.
 # Clean up data set and combine similar event types
 
 sd2 <- sd1 %>% select(c(FATALITIES,INJURIES,EVTYPE,REFNUM,BGN_DATE))
-#Look at top 1000 injury count events
+#Look at top 1000 injury and fatality count events
 injOrderInd <-order(sd2$INJURIES,decreasing = TRUE)  # gets index of max inj and sorts
+injOrderFat <-order(sd2$FATALITIES,decreasing = TRUE)
 top1000Injdf <- sd2[injOrderInd[1:1000],]
-print(tail(cbind(top1000Injdf$INJURIES,top1000Injdf$EVTYPE),n  = 20))
-injCateg <- unique(top1000Injdf$EVTYPE) #45 evtypes returned
+top1000Fatdf <- sd2[injOrderFat[1:1000],]
+#print(tail(cbind(top1000Injdf$INJURIES,top1000Injdf$EVTYPE),n  = 20))
+injUniq <- unique(top1000Injdf$EVTYPE) #45 evtypes returned
+fatUniq <- unique(top1000Fatdf$EVTYPE) #71
 
 qplot(factor(EVTYPE),INJURIES,data =top1000Injdf)
+qplot(factor(EVTYPE),FATALITIES,data =top1000Fatdf)
 
 # Want the event types to be grouped 
 top1000Injdf$EVTYPE[grep("TORNA|SPOUT",top1000Injdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Tornado"
@@ -175,6 +195,16 @@ top1000Injdf$EVTYPE[grep("THUNDER|TSTM|LIGHTN",top1000Injdf$EVTYPE,ignore.case =
 top1000Injdf$EVTYPE[grep("HURRIC|TROPICAL",top1000Injdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Hurricane "
 top1000Injdf$EVTYPE[grep("FLOOD",top1000Injdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Flood "
 #22 categories now
+
+top1000Fatdf$EVTYPE[grep("TORNA|SPOUT",top1000Fatdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Tornado"
+top1000Fatdf$EVTYPE[grep("HEAT",top1000Fatdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Heat"
+top1000Fatdf$EVTYPE[grep("WINTER|BLIZZARD|SNOW",top1000Fatdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "snow"
+top1000Fatdf$EVTYPE[grep("ICE|MIX|GLAZE",top1000Fatdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Ice"
+top1000Fatdf$EVTYPE[grep("THUNDER|TSTM|LIGHTN",top1000Fatdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Tstorm"
+top1000Fatdf$EVTYPE[grep("HURRIC|TROPICAL",top1000Fatdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Hurricane "
+top1000Fatdf$EVTYPE[grep("FLOOD",top1000Fatdf$EVTYPE,ignore.case = TRUE,fixed = FALSE)] <- "Flood "
+# 42 categories now
+
 p6 <-ggplot(data =top1000Injdf,
             aes(EVTYPE,INJURIES))+
             geom_point(aes(y = INJURIES), colour = 'red')+
@@ -189,18 +219,14 @@ print(InjSums[1:10,])   #Tornado, Heat, Flood, snow...
 #Interesting that the single max death event did not appear in this list
 #Look again at total data with groupings. Call this dataset sd3
 
+FatSums <-top1000Fatdf %>% group_by(EVTYPE) %>%
+  summarise(totFat = sum(FATALITIES)) %>% arrange(desc(totFat),by_group = TRUE)
+print(FatSums[1:10,]) 
 
+#For both injuries and fatalites, order is : Tornado, Heat, Flood
 #-----------------------------------------------------------------------------
 #Nothing good below (except link)
 #----------------------------------------------------
 
-
-injOrderInd <-order(sd2$INJURIES,decreasing = TRUE)  # gets index of max inj and sorts
-top10Injdf <- sd2[injOrderInd[1:10],]
-print(head(cbind(top10Injdf$INJURIES,top10Injdf$EVTYPE),n  = 20))
-
-
-
 # https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html
-print(unique(sd2$EVTYPE))
-hist(as.factor(sd2$EVTYPE))
+
