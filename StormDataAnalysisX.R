@@ -224,8 +224,84 @@ print(FatSums[1:10,])
 
 #For both injuries and fatalites, order is : Tornado, Heat, Flood
 #-----------------------------------------------------------------------------
-#Nothing good below (except link)
+# good grep example
 #----------------------------------------------------
-
 # https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html
+#----------------------------------------------------------------------------------
+# Look at damage data:
+str(sd1)
+summary(sd1$PROPDMG)
+unique(sd1$PROPDMGEXP)
+print (sd1 %>% count(PROPDMGEXP, sort = TRUE))  # NAs are significant
+# need to look at the low count other values to be sure what they meant
 
+sd1 %>% filter(!is.na(PROPDMGEXP)) %>%
+  filter(PROPDMGEXP != 'K') %>% 
+  filter(PROPDMGEXP != 'M') %>% 
+  filter(PROPDMGEXP != '0') %>%
+  filter(PROPDMGEXP != 'B') %>% 
+  filter(PROPDMGEXP != 'K') %>% 
+  select(c(EVTYPE,PROPDMG,PROPDMGEXP)) %>% print
+
+sd1 %>% filter(is.na(PROPDMGEXP)) %>% select(PROPDMG) %>% summary  #mean 0.00113, max 75
+
+summary(sd1$CROPDMG)
+unique(sd1$CROPDMGEXP)
+print (sd1 %>% count(CROPDMGEXP, sort = TRUE))  # NAs are significant
+# need to look at the low count other values to be sure what they meant
+
+sd1 %>% filter(!is.na(CROPDMGEXP)) %>%
+  filter(CROPDMGEXP != 'K') %>% 
+  filter(CROPDMGEXP != 'M') %>% 
+  filter(CROPDMGEXP != '0') %>%
+  filter(CROPDMGEXP != 'B') %>% 
+  filter(CROPDMGEXP != 'K') %>% 
+  select(c(EVTYPE,CROPDMG,CROPDMGEXP)) %>% print
+
+sd1 %>% filter(is.na(CROPDMGEXP)) %>% select(CROPDMG) %>% summary
+
+#(B or b = Billion, M or m = Million, K or k = Thousand, H or h = Hundred).
+#The number from one to ten represent the power of ten (10^The number). 
+# The symbols "-", "+" and "?" refers to less than, greater than and low certainty. 
+# Ignore low certainty
+
+## Approach: sum damage dollars by year, apply inflation, pick worst year, determine events
+
+sdd1 <- sd1 %>% 
+  filter(!is.na(CROPDMGEXP)) %>% 
+  filter(!is.na(PROPDMGEXP)) %>%
+  filter(!is.na(CROPDMG)) %>%
+  filter(!is.na(PROPDMG)) %>%
+  filter(CROPDMGEXP != '+') %>%
+  filter(PROPDMGEXP != '+') %>%
+  filter(CROPDMGEXP != '-') %>%
+  filter(PROPDMGEXP != '-') %>%
+  filter(CROPDMGEXP != '?') %>%
+  filter(PROPDMGEXP != '?') %>%
+  select(c(BGN_DATE,PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP,EVTYPE,REFNUM))  #279561 obs
+
+sdd1$PROPDMGEXP[grep("B|b",sdd1$PROPDMGEXP)] <- 9
+sdd1$PROPDMGEXP[grep("M|m",sdd1$PROPDMGEXP)] <- 6
+sdd1$PROPDMGEXP[grep("K|k",sdd1$PROPDMGEXP)] <- 3
+sdd1$PROPDMGEXP[grep("H|h",sdd1$PROPDMGEXP)] <- 2
+sdd1$CROPDMGEXP[grep("B|b",sdd1$CROPDMGEXP)] <- 9
+sdd1$CROPDMGEXP[grep("M|m",sdd1$CROPDMGEXP)] <- 6
+sdd1$CROPDMGEXP[grep("K|k",sdd1$CROPDMGEXP)] <- 3
+sdd1$CROPDMGEXP[grep("H|h",sdd1$CROPDMGEXP)] <- 2
+
+sdd2 <- sdd1 %>%
+  mutate(PROPERTY = PROPDMG * 10^(as.numeric(PROPDMGEXP))) %>%
+  mutate(CROPS = CROPDMG * 10^(as.numeric(CROPDMGEXP))) %>%
+  mutate(totDamage = PROPERTY + CROPS) %>%
+  select(c(BGN_DATE,PROPERTY,CROPS,totDamage,EVTYPE,REFNUM))
+
+sdd2$BGN_DATE <- year(sdd2$BGN_DATE)
+
+pd1 <- qplot(BGN_DATE,totDamage,data = sdd2,
+             xlab = "year",
+             ylab = "total damages, $")
+print(pd1)
+
+sdd3DamInd <-order(sdd2$totDamage,decreasing = TRUE)  # gets index of max $ and sorts
+top5Dam <- sdd2[sdd3DamInd[1:5],]
+print(top5Dam)
