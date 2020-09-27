@@ -1,7 +1,6 @@
 install.packages("R.utils")
 install.packages ("cowplot")
 library(cowplot)
-
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -19,13 +18,13 @@ print(R.Version()['version.string'])  # "R version 4.0.2 (2020-06-22)"
 t1 <- Sys.time()
 bunzip2("repdata_data_StormData.csv.bz2","StormData.csv", remove = FALSE, skip = TRUE)
 t2 <- Sys.time()
-print(t2-t1)  #Time difference of 19.25788 secs
+print(t2-t1)  #Time difference of 19.25788 secs on my machine
 
 #Load raw data into R
 t3 <- Sys.time()
 StormData <- read.csv("StormData.csv",sep = ",")
 t4 <- Sys.time()
-print(t4-t3)   #Time difference of 20.29467 secs -24.37243 secs
+print(t4-t3)   #Time difference of 24.37243 secs on my machine
 
 ## PROCESSING
 # info about the original variables can be found here: 
@@ -39,7 +38,7 @@ print(str(StormData, give.length = TRUE))
 # There are 985 unique events listed, but the documentation lists 48 Storm Events
 print(unique(StormData$EVTYPE))  # returns list of 985 events
 
-sd1 <-na_if(StormData[,],"")   #this is slow. Not sure I had to yet
+sd1 <-na_if(StormData[,],"")   #this is slow.
 sd1$BGN_DATE <- date(mdy_hms(sd1$BGN_DATE))
 print(length(unique(sd1$EVTYPE)))
 print(str(sd1))
@@ -56,7 +55,7 @@ p2 <- plot.default(factor(sd1$EVTYPE),y = sd1$INJURIES)
 print(p2) #make prettier, color the ranges
 dev.off()
 
-#FATALITIES AND INJURIES Together
+#FATALITIES AND INJURIES plotted Together
 p3 <-ggplot(data =sd1,
             aes(EVTYPE))+
   ylab("Fatalities and Injuries")+
@@ -65,8 +64,8 @@ p3 <-ggplot(data =sd1,
   geom_point(aes(y = FATALITIES, colour = 'Fatalities'))+
   theme(axis.text.x = element_blank())+
   labs(title = "Raw data scatter plot")
-png('plot3.png',width=1080,height=360,units="px",bg = "transparent")
-print(p3) #make prettier, color the ranges
+png('plot3.png',width=720,height=360,units="px",bg = "transparent")
+print(p3)
 dev.off()
 
 sd3 <- sd1
