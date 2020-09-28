@@ -7,7 +7,7 @@ output:
     fig_width: 10
     keep_md: yes
 ---
-*NOTE:  rmarkdown::render('Weather Event Consequences.Rmd', clean = FALSE)* to knit
+*NOTE:  rmarkdown::render('Weather_Consequences.Rmd', clean = FALSE)* to knit
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -42,6 +42,7 @@ library(ggplot2)
 library(R.utils)
 library(lubridate)
 library(lattice)
+library(knitr)
 ```
 
 ```{r import, cache = TRUE}
@@ -170,7 +171,7 @@ Now apply a similar filter to the original data set and confirm groupings are th
 
 Create new plot that will be combined with the first plot to validate event consolidation.Note that the new plot has a horizontal scale slightly stretched (less categories), but peak matching can still be observed.
 
-```{r consolidatedInjFatPlot, cache = TRUE, fig.width = 9, fig.height = 7, fig.cap = "Comparison of raw data scatter plot with consolidated events scatter plot}
+```{r consolidatedInjFatPlot, cache = TRUE, fig.width = 9, fig.height = 7, fig.cap = "Comparison of raw data scatter plot with consolidated events scatter plot"}
 
 sd3 <- sd1
 #These matching criteria were iteratively determined
@@ -289,7 +290,7 @@ From the plot, peaks are observed. Note that the vertical scale is log to the ba
 
 ```{r topDamageEvents}
 sdd3DamInd <-order(sdd2$totDamage,decreasing = TRUE)  # gets index of max $ and sorts
-top5Dam <- sdd2[sdd3DamInd[1:10,]]
+top5Dam <- sdd2[sdd3DamInd[1:10],]
 print(top5Dam)
 ```
 # Results
@@ -300,12 +301,14 @@ Summing injuries and fatalities from similar events results in tornados being ov
 
 ```{r resultsHealth}
 
-kable(c(InjSums[1:10,],FatSums[1:10,]), caption = "Table showing top 10 event types for total injuries and fatalities")
+kable(c(InjSums[1:10,],FatSums[1:10,]), 
+      col.names = c("Event", "Injuries","Event","Fatalites"),
+      caption = "Table showing top 10 event types for total injuries and fatalities")
 
 ```
 
 Economic damages were analyzed by year. The top most costly event was a flood in 2006. This event was 10 times higher in cost then the second event, which was also a flood. One can conclude that floods are the most economically damaging event, and can come from rivers, hurricanes, and storm surges. Because flooding events were overwhelming more costly, no attempt to account for inflation has been made. The table below shows the costs and events.
 
 ```{r resultsEcon}
-kable(sdd2[sdd3DamInd[1:10,2:5]],caption = "Table showing to economic damages, in dollars.")
+kable(sdd2[sdd3DamInd[1:10],2:5],caption = "Table showing to economic damages, in dollars.", row.names = NULL)
 ```
