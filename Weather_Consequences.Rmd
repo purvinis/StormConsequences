@@ -7,7 +7,7 @@ output:
     fig_width: 10
     keep_md: yes
 ---
-*NOTE:  rmarkdown::render('PA1_template.Rmd', clean = FALSE)* to knit
+*NOTE:  rmarkdown::render('Weather Event Consequences.Rmd', clean = FALSE)* to knit
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -76,7 +76,7 @@ Events (EVTYPE variable) that cause deaths or injuries are harmful. The analysis
 ### Scatter plot of the raw data INJURIES, FATALITIES versus EVTYPE
 The initial look at the data using a scatter plot indicated clusters and peaks that have high harm. The problem is that many event types have similar, ambiguous, or poorly worded values (such as '?', or 'none', or 'torndao', etc.), which results in the 985 unique event types when there really should be only 48 according to the documentation. These problems will be addressed next. The initial plot and the determination of the maximum values is programmed with this code: 
 
-```{r rawScatterAndPeaks, cache=TRUE, fig.width = 9, fig.height = 3, fig.cap= "Raw Storm Data Scatter Plot}
+```{r rawScatterAndPeaks, cache=TRUE, fig.width = 9, fig.height = 3, fig.cap= "Raw Storm Data Scatter Plot"}
 #FATALITIES AND INJURIES plotted Together
 p3 <-ggplot(data =sd1,
             aes(EVTYPE))+
@@ -116,9 +116,9 @@ print(substr(remarksMaxInj,1,542))
 ```
 ### Further analysis, consolidating events
 
-Quantify by summing top 1000 events with the most injuries or fatalities. This determines the event types with overall worst injury and fatality record. The steps are to get the top 1000, then look at the EVTYPEs, then consolidate similar names. This was an iterative process initially. The final step will be to apply the consolidation to the original data (to reduce the 985 EVTYPES), and confirm that the peaks in the original data are the same, and that no significant other peaks have appeared.
+Data was quantified by summing top 1000 events with the most injuries or fatalities. This determines the event types with overall worst injury and fatality record. The steps are to get the top 1000, then look at the EVTYPEs, then consolidate similar names. This was an iterative process initially. The final step will be to apply the consolidation to the original data (to reduce the 985 EVTYPES), and confirm that the peaks in the original data are the same, and that no significant other peaks have appeared.
 
-Fortunately, the top 1000 did not include some of the outliers, i.e. events that occurred relatively few times, did not have high injuries and fatalities, and had poor naming conventions. These events get lumped together. Some of these negligible events can be grouped with the high impact events when the REMARKS variable is read, if desired, but are not likely to change the overall outcome. 
+Fortunately, the top 1000 did not include many of the outliers, i.e. events that occurred relatively few times, did not have high injuries and fatalities, and had poor naming conventions. These events get lumped together. Some of these negligible events can be grouped with the high impact events when the REMARKS variable is read, if desired, but are not likely to change the overall outcome. 
 
 ```{r consolidateInjAndFat, cache = TRUE}
 sd2 <- sd1 %>% select(c(FATALITIES,INJURIES,EVTYPE,REFNUM,BGN_DATE))
@@ -219,6 +219,93 @@ print(p35)
 
 ## Across the United States, which types of events have the greatest economic consequences?
 
+The approach taken for this inquiry was to sum damage dollars by year, pick the worst years in terms of monetary damages to property and crops, then determine causing events.
+
+Variables of interest are:
+*date - BGN_DATE
+*PROPDMG - numeric dollar amount base number for property damage
+*PROPDMGEXP - The multiplier for the base number in PROPDMG.(B or b = Billion, M or m = Million, K or k = Thousand, H or h = Hundred).The number from one to ten represent the power of ten (10^The number). The symbols "-", "+" and "?" refers to less than, greater than and low certainty.
+*CROPDMG - numeric dollar amount base number for property damage
+*CROPDMGEXP - The multiplier for the base number in CROPDMG.(B or b = Billion, M or m = Million, K or k = Thousand, H or h = Hundred).The number from one to ten represent the power of ten (10^The number). The symbols "-", "+" and "?" refers to less than, greater than and low certainty.
+*EVTYPE - type of weather event
+
+Initial observations of the data set indicate high number of NAs in the crop and property damage values, which makes for good reduction of the data set. Also, the uncertain damage amounts were small, so can be neglected. The reduced data set is filter with this code:
+
+``` {r damages}
+sdd1 <- sd1 %>% 
+  filter(!is.na(CROPDMGEXP)) %>% 
+  filter(!is.na(PROPDMGEXP)) %>%
+  filter(!is.na(CROPDMG)) %>%
+  filter(!is.na(PROPDMG)) %>%
+  filter(CROPDMGEXP != '+') %>%
+  filter(PROPDMGEXP != '+') %>%
+  filter(CROPDMGEXP != '-') %>%
+  filter(PROPDMGEXP != '-') %>%
+  filter(CROPDMGEXP != '?') %>%
+  filter(PROPDMGEXP != '?') %>%
+  select(c(BGN_DATE,PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP,EVTYPE,REFNUM))  #279561 obs
+
+```
+
+Next the exponential data is processed so that 'B' is replaced with '9', for 10^9, and etc for 'M', 'k', 'h', and correction for inconsistent use of capitalization:
+
+``` {r dollarsExp}
+sdd1$PROPDMGEXP[grep("B|b",sdd1$PROPDMGEXP)] <- 9
+sdd1$PROPDMGEXP[grep("M|m",sdd1$PROPDMGEXP)] <- 6
+sdd1$PROPDMGEXP[grep("K|k",sdd1$PROPDMGEXP)] <- 3
+sdd1$PROPDMGEXP[grep("H|h",sdd1$PROPDMGEXP)] <- 2
+sdd1$CROPDMGEXP[grep("B|b",sdd1$CROPDMGEXP)] <- 9
+sdd1$CROPDMGEXP[grep("M|m",sdd1$CROPDMGEXP)] <- 6
+sdd1$CROPDMGEXP[grep("K|k",sdd1$CROPDMGEXP)] <- 3
+sdd1$CROPDMGEXP[grep("H|h",sdd1$CROPDMGEXP)] <- 2
+```
+
+The real cost of an event is calculated and a new column with the dollar amount is added to the dataset for both crop and property damage. Also, the damages are totaled for each event. We are interested in plotting by year, so the year of the date variable is extracted. The new dataset, reduced, is call sdd2.
+
+``` {r dollars}
+sdd2 <- sdd1 %>%
+  mutate(PROPERTY = PROPDMG * 10^(as.numeric(PROPDMGEXP))) %>%
+  mutate(CROPS = CROPDMG * 10^(as.numeric(CROPDMGEXP))) %>%
+  mutate(totDamage = PROPERTY + CROPS) %>%
+  select(c(BGN_DATE,PROPERTY,CROPS,totDamage,EVTYPE,REFNUM))
+
+sdd2$BGN_DATE <- year(sdd2$BGN_DATE)
+```
+
+The data needs to be plotted to identify where are the events with high economic damages. We are interested in the peaks of plot. Note that the plot is color coded, but there are roughly 279k points, so much overlap exists. It is the peaks we want.
+
+```{r damagesPlot,cache=TRUE, fig.width = 9, fig.height = 5, fig.cap= "Economic damages by year"}
+pd1 <- ggplot(sdd2,aes(x=BGN_DATE))+
+  geom_point(aes(y = log10(PROPERTY),color = 'Property'))+
+  geom_point(aes(y = log10(CROPS),color = 'Crops'))+
+  geom_point(aes(y = log10(totDamage),color = 'Total$'))+
+  labs(x = "year",y = "log $",color = 'Damages',
+       title = "Economic Damages from Weather Events by year")
+
+print(pd1)
+```
+
+From the plot, peaks are observed. Note that the vertical scale is log to the base 10 of the dollar amount, so that the points could stretch vertically. (Otherwise they mostly cluster at the bottom of the chart on top of each other). We are interested in the the top 10 or 20 events, and observing what they damages are and what events caused them. This code will provide the information:
+
+```{r topDamageEvents}
+sdd3DamInd <-order(sdd2$totDamage,decreasing = TRUE)  # gets index of max $ and sorts
+top5Dam <- sdd2[sdd3DamInd[1:10,]]
+print(top5Dam)
+```
 # Results
 
-The analysis began with the raw data, then with a subset of data consisting of the most injurious or fatal events, to extract the overall events most harmful to population health. The analysis subsequently verified consolidating the untidy list of event types was a valid method of data consolidation. The table below shows that tornados are the extreme weather event that caused both the most injuries and the most fatalities between 1950 and November 2011. This is followed by heat related events.
+The analysis began with the raw data, then with a subset of data consisting of the most injurious or fatal events, to extract the overall events most harmful to population health. The analysis subsequently verified consolidating the untidy list of event types was a valid method of data consolidation. The table below shows that tornados are the extreme weather event that caused both the most injuries and the most fatalities between 1950 and November 2011. This is followed by heat related events. The single highest day of injury was from a `r eventMaxInj` which occurred on `r dateMaxInj` and caused `r maxInj` injuries. 
+
+Summing injuries and fatalities from similar events results in tornados being overall the most harmful weather event to the population health. The table below shows the top 10 events.
+
+```{r resultsHealth}
+
+kable(c(InjSums[1:10,],FatSums[1:10,]), caption = "Table showing top 10 event types for total injuries and fatalities")
+
+```
+
+Economic damages were analyzed by year. The top most costly event was a flood in 2006. This event was 10 times higher in cost then the second event, which was also a flood. One can conclude that floods are the most economically damaging event, and can come from rivers, hurricanes, and storm surges. Because flooding events were overwhelming more costly, no attempt to account for inflation has been made. The table below shows the costs and events.
+
+```{r resultsEcon}
+kable(sdd2[sdd3DamInd[1:10,2:5]],caption = "Table showing to economic damages, in dollars.")
+```

@@ -227,7 +227,9 @@ print(FatSums[1:10,])
 # good grep example
 #----------------------------------------------------
 # https://rstudio-pubs-static.s3.amazonaws.com/74603_76cd14d5983f47408fdf0b323550b846.html
-#----------------------------------------------------------------------------------
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#PART 2
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Look at damage data:
 str(sd1)
 summary(sd1$PROPDMG)
@@ -297,11 +299,15 @@ sdd2 <- sdd1 %>%
 
 sdd2$BGN_DATE <- year(sdd2$BGN_DATE)
 
-pd1 <- qplot(BGN_DATE,totDamage,data = sdd2,
-             xlab = "year",
-             ylab = "total damages, $")
+pd1 <- ggplot(sdd2,aes(x=BGN_DATE))+
+  geom_point(aes(y = log10(PROPERTY),color = 'Property'))+
+  geom_point(aes(y = log10(CROPS),color = 'Crops'))+
+  geom_point(aes(y = log10(totDamage),color = 'Total$'))+
+  labs(x = "year",y = "log $",color = 'Damages',
+       title = "Economic Damages from Weather Events by year")
+
 print(pd1)
 
 sdd3DamInd <-order(sdd2$totDamage,decreasing = TRUE)  # gets index of max $ and sorts
-top5Dam <- sdd2[sdd3DamInd[1:5],]
-print(top5Dam)
+top5Dam <- sdd2[sdd3DamInd[1:10],]
+print(top5Dam[1:10,2:5])
