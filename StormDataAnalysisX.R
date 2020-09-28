@@ -310,4 +310,12 @@ print(pd1)
 
 sdd3DamInd <-order(sdd2$totDamage,decreasing = TRUE)  # gets index of max $ and sorts
 top5Dam <- sdd2[sdd3DamInd[1:10],]
-print(top5Dam[1:10,2:5])
+print(top5Dam)
+
+print(sdd2[sdd3DamInd[1:10],2:5], row.names = FALSE)
+
+result1 <-cbind(InjSums[1:10,],FatSums[1:10,])
+print(result1)
+
+
+#https://rpubs.com/GPurvinis/Weather_Consequences
